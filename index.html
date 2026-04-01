@@ -39,49 +39,65 @@
         h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
         .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
 
-        .input-container {
+        .search-container {
             position: relative;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
 
         .cron-input {
             width: 100%;
             padding: 18px;
+            padding-right: 65px;
             border: 2px solid var(--accent);
             border-radius: var(--radius);
             background: var(--input-bg);
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 700;
             color: var(--main) !important;
             box-sizing: border-box;
             outline: none;
-            text-align: center;
             -webkit-appearance: none;
             -webkit-text-fill-color: var(--main) !important;
             opacity: 1 !important;
-            letter-spacing: 1px;
+            text-align: center;
         }
         .cron-input::placeholder { color: #bbb; -webkit-text-fill-color: #bbb; }
+
+        .clear-btn {
+            position: absolute;
+            right: 15px;
+            bottom: 11px;
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 0.9rem;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 5px 8px;
+            display: none;
+        }
+        .clear-btn.active { display: block; }
+        .clear-btn:active { color: var(--main); }
 
         .result-card {
             background: #fff;
             border: 2px solid var(--main);
             border-radius: var(--radius);
             padding: 25px 20px;
-            min-height: 110px;
+            min-height: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
             margin-bottom: 25px;
         }
 
         .result-text {
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-weight: 800;
             line-height: 1.5;
-            word-break: break-word;
+            color: var(--main);
         }
 
         .error-text { color: #ff4444; font-size: 0.9rem; font-weight: 700; }
@@ -101,10 +117,11 @@
             cursor: pointer;
             padding: 8px;
             border-radius: 10px;
-            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
         }
-        .example-item:active { background: var(--accent); border-color: #ddd; }
-        .example-code { font-family: monospace; background: var(--accent); padding: 2px 6px; border-radius: 4px; margin-right: 8px; font-weight: 800; }
+        .example-item:active { background: var(--accent); }
+        .example-code { font-family: monospace; background: var(--accent); padding: 2px 6px; border-radius: 4px; margin-right: 10px; font-weight: 800; }
 
         footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
         .footer-btns { margin-top: 30px; }
@@ -136,12 +153,13 @@
     <h1>Cron Talk</h1>
     <p class="subtitle">Convert Cron expressions into human language.</p>
 
-    <div class="input-container">
-        <input type="text" class="cron-input" id="cronInput" placeholder="* * * * *" value="*/15 * * * *" oninput="translateCron()">
+    <div class="search-container">
+        <input type="text" class="cron-input" id="cronInput" placeholder="e.g. * * * * *" oninput="handleInput()">
+        <button class="clear-btn" id="clearBtn" onclick="clearSearch()">clr</button>
     </div>
 
     <div class="result-card">
-        <div id="resultText" class="result-text">Every 15 minutes</div>
+        <div id="resultText" class="result-text"><span style="color:#bbb">Waiting for input...</span></div>
     </div>
 
     <div class="example-box">
@@ -176,6 +194,25 @@
     const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+    function handleInput() {
+        const input = document.getElementById('cronInput');
+        const clearBtn = document.getElementById('clearBtn');
+        if (input.value.length > 0) {
+            clearBtn.classList.add('active');
+        } else {
+            clearBtn.classList.remove('active');
+        }
+        translateCron();
+    }
+
+    function clearSearch() {
+        const input = document.getElementById('cronInput');
+        input.value = '';
+        document.getElementById('clearBtn').classList.remove('active');
+        input.focus();
+        translateCron();
+    }
+
     function translateCron() {
         const input = document.getElementById('cronInput').value.trim();
         const resultDiv = document.getElementById('resultText');
@@ -193,45 +230,77 @@
 
         try {
             const [m, h, dom, mon, dow] = parts;
+            validate(m, h, dom, mon, dow);
             const desc = interpret(m, h, dom, mon, dow);
             resultDiv.innerHTML = `<span>${desc}</span>`;
         } catch (e) {
-            resultDiv.innerHTML = `<span class="error-text">Invalid Cron Pattern</span>`;
+            resultDiv.innerHTML = `<span class="error-text">${e.message}</span>`;
         }
+    }
+
+    function validate(m, h, dom, mon, dow) {
+        const check = (val, max, name) => {
+            if (val === '*' || val.includes('/') || val.includes('-') || val.includes(',')) return;
+            const n = parseInt(val);
+            if (isNaN(n) || n < 0 || n > max) throw new Error(`Invalid ${name} value`);
+        };
+        check(m, 59, "minute");
+        check(h, 23, "hour");
+        check(dom, 31, "day");
+        check(mon, 12, "month");
+        check(dow, 6, "weekday");
     }
 
     function interpret(m, h, dom, mon, dow) {
         let timePart = "";
         let datePart = "";
 
-        // Time logic
+        // Time logic (Improved)
         if (m === '*' && h === '*') {
             timePart = "Every minute";
         } else if (h === '*') {
-            timePart = `Every hour at minute ${parseValue(m)}`;
+            timePart = `At ${parseRange(m, "minute")} of every hour`;
         } else if (m === '*') {
-            timePart = `Every minute of hour ${parseValue(h)}`;
+            timePart = `Every minute, between ${parseRange(h, "hour")}`;
         } else {
-            timePart = `At ${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+            timePart = `At ${formatTime(h, m)}`;
         }
 
-        // Date/Week logic
+        // Date/Week logic (Improved)
         if (dom === '*' && mon === '*' && dow === '*') {
             datePart = "every day";
         } else {
             const dStr = (dow !== '*') ? `on ${parseDays(dow)}` : "";
             const mStr = (mon !== '*') ? `in ${parseMonths(mon)}` : "";
-            const domStr = (dom !== '*') ? `on day ${dom}` : "";
-            datePart = `${domStr} ${mStr} ${dStr}`.trim();
+            const domStr = (dom !== '*') ? `on day ${parseRange(dom, "")}` : "";
+            datePart = `${domStr} ${mStr} ${dStr}`.trim().replace(/\s+/g, ' ');
         }
 
         return `${timePart}, ${datePart}`;
     }
 
-    function parseValue(v) {
-        if (v.includes('/')) return `every ${v.split('/')[1]}`;
-        if (v.includes('-')) return `from ${v.split('-')[0]} to ${v.split('-')[1]}`;
+    function parseRange(v, unit) {
+        if (v === '*') return "every " + unit;
+        if (v.includes('/')) return `every ${v.split('/')[1]} ${unit}s`.trim();
+        if (v.includes('-')) {
+            const [s, e] = v.split('-');
+            return `${formatUnit(s, unit)} to ${formatUnit(e, unit)}`;
+        }
+        if (v.includes(',')) return v;
+        return formatUnit(v, unit);
+    }
+
+    function formatUnit(v, unit) {
+        if (unit === "hour") return v.padStart(2, '0') + ":00";
         return v;
+    }
+
+    function formatTime(h, m) {
+        const hh = h.includes('-') || h.includes(',') ? parseRange(h, "hour") : h.padStart(2, '0');
+        const mm = m.includes('/') ? `every ${m.split('/')[1]} min` : m.padStart(2, '0');
+        
+        if (h.includes('-') || h.includes(',')) return `${mm} past ${hh}`;
+        return `${hh}:${mm}`;
     }
 
     function parseDays(d) {
@@ -249,15 +318,13 @@
     }
 
     function setExample(val) {
-        document.getElementById('cronInput').value = val;
-        translateCron();
+        const input = document.getElementById('cronInput');
+        input.value = val;
+        handleInput();
     }
 
     function showModal() { document.getElementById('modal').style.display = 'flex'; }
     function hideModal() { document.getElementById('modal').style.display = 'none'; }
-
-    // Initial load
-    translateCron();
 </script>
 
 </body>
