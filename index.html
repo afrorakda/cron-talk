@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cron Talk</title>
+    
+    <link rel="icon" href="image_14.png">
+    <link rel="apple-touch-icon" href="image_14.png">
+
+    <style>
+        :root {
+            --main: #333;
+            --bg: #fff;
+            --accent: #eee;
+            --input-bg: #fafafa;
+            --radius: 15px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        h1 { font-size: 1.8rem; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
+        .subtitle { font-size: 0.85rem; color: #666; font-weight: 500; margin-bottom: 30px; }
+
+        .input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .cron-input {
+            width: 100%;
+            padding: 18px;
+            border: 2px solid var(--accent);
+            border-radius: var(--radius);
+            background: var(--input-bg);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--main) !important;
+            box-sizing: border-box;
+            outline: none;
+            text-align: center;
+            -webkit-appearance: none;
+            -webkit-text-fill-color: var(--main) !important;
+            opacity: 1 !important;
+            letter-spacing: 1px;
+        }
+        .cron-input::placeholder { color: #bbb; -webkit-text-fill-color: #bbb; }
+
+        .result-card {
+            background: #fff;
+            border: 2px solid var(--main);
+            border-radius: var(--radius);
+            padding: 25px 20px;
+            min-height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }
+
+        .result-text {
+            font-size: 1.15rem;
+            font-weight: 800;
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .error-text { color: #ff4444; font-size: 0.9rem; font-weight: 700; }
+
+        .example-box {
+            text-align: left;
+            background: var(--input-bg);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin-bottom: 30px;
+        }
+        .example-title { font-size: 0.75rem; font-weight: 800; color: #999; margin-bottom: 10px; text-transform: uppercase; }
+        .example-item { 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+        }
+        .example-item:active { background: var(--accent); border-color: #ddd; }
+        .example-code { font-family: monospace; background: var(--accent); padding: 2px 6px; border-radius: 4px; margin-right: 8px; font-weight: 800; }
+
+        footer { margin-top: 50px; font-size: 11px; color: #aaa; line-height: 1.8; }
+        .footer-btns { margin-top: 30px; }
+        .kofi-btn {
+            display: inline-block; background: var(--main); color: #fff;
+            padding: 12px 25px; border-radius: var(--radius);
+            text-decoration: none; font-weight: bold; font-size: 14px; margin-bottom: 12px;
+        }
+        .home-btn {
+            display: block; width: 60%; margin: 0 auto; background: var(--accent);
+            color: var(--main); border: none; padding: 10px;
+            border-radius: var(--radius); font-weight: 700; font-size: 13px; cursor: pointer;
+        }
+
+        #modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: #fff; width: 85%; max-width: 320px; padding: 30px;
+            border-radius: var(--radius); text-align: left; position: relative;
+        }
+        .close-x { position: absolute; top: 15px; right: 20px; font-size: 20px; color: #ccc; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Cron Talk</h1>
+    <p class="subtitle">Convert Cron expressions into human language.</p>
+
+    <div class="input-container">
+        <input type="text" class="cron-input" id="cronInput" placeholder="* * * * *" value="*/15 * * * *" oninput="translateCron()">
+    </div>
+
+    <div class="result-card">
+        <div id="resultText" class="result-text">Every 15 minutes</div>
+    </div>
+
+    <div class="example-box">
+        <div class="example-title">Quick Examples</div>
+        <div class="example-item" onclick="setExample('0 0 * * *')"><span class="example-code">0 0 * * *</span> Daily at midnight</div>
+        <div class="example-item" onclick="setExample('*/30 9-17 * * 1-5')"><span class="example-code">*/30 9-17 * * 1-5</span> Office hours</div>
+        <div class="example-item" onclick="setExample('0 12 1 * *')"><span class="example-code">0 12 1 * *</span> 1st of every month</div>
+    </div>
+
+    <div class="footer-btns">
+        <a href="https://ko-fi.com/afrorakda" target="_blank" class="kofi-btn">☕️buy me a coffee</a>
+        <button class="home-btn" onclick="showModal()">Add to Home Screen</button>
+    </div>
+
+    <footer>
+        <div>No login / No tracking / No ads / Browser only</div>
+        <div>Privacy Policy / afrorakda © 2026</div>
+    </footer>
+</div>
+
+<div id="modal" onclick="hideModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-x" onclick="hideModal()">×</span>
+        <h3>📱 Install</h3>
+        <p>Add to your home screen.</p>
+        <p>🍏 <strong>iPhone (Safari):</strong><br>Tap Share, then Add to Home Screen.</p>
+        <p>🤖 <strong>Android (Chrome):</strong><br>Tap Menu (⋮), then Add to Home Screen.</p>
+    </div>
+</div>
+
+<script>
+    const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const MONTHS = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    function translateCron() {
+        const input = document.getElementById('cronInput').value.trim();
+        const resultDiv = document.getElementById('resultText');
+        
+        if (!input) {
+            resultDiv.innerHTML = '<span style="color:#bbb">Waiting for input...</span>';
+            return;
+        }
+
+        const parts = input.split(/\s+/);
+        if (parts.length !== 5) {
+            resultDiv.innerHTML = '<span class="error-text">Invalid format: Need 5 parts</span>';
+            return;
+        }
+
+        try {
+            const [m, h, dom, mon, dow] = parts;
+            const desc = interpret(m, h, dom, mon, dow);
+            resultDiv.innerHTML = `<span>${desc}</span>`;
+        } catch (e) {
+            resultDiv.innerHTML = `<span class="error-text">Invalid Cron Pattern</span>`;
+        }
+    }
+
+    function interpret(m, h, dom, mon, dow) {
+        let timePart = "";
+        let datePart = "";
+
+        // Time logic
+        if (m === '*' && h === '*') {
+            timePart = "Every minute";
+        } else if (h === '*') {
+            timePart = `Every hour at minute ${parseValue(m)}`;
+        } else if (m === '*') {
+            timePart = `Every minute of hour ${parseValue(h)}`;
+        } else {
+            timePart = `At ${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+        }
+
+        // Date/Week logic
+        if (dom === '*' && mon === '*' && dow === '*') {
+            datePart = "every day";
+        } else {
+            const dStr = (dow !== '*') ? `on ${parseDays(dow)}` : "";
+            const mStr = (mon !== '*') ? `in ${parseMonths(mon)}` : "";
+            const domStr = (dom !== '*') ? `on day ${dom}` : "";
+            datePart = `${domStr} ${mStr} ${dStr}`.trim();
+        }
+
+        return `${timePart}, ${datePart}`;
+    }
+
+    function parseValue(v) {
+        if (v.includes('/')) return `every ${v.split('/')[1]}`;
+        if (v.includes('-')) return `from ${v.split('-')[0]} to ${v.split('-')[1]}`;
+        return v;
+    }
+
+    function parseDays(d) {
+        return d.split(',').map(v => {
+            if (v.includes('-')) {
+                const [s, e] = v.split('-');
+                return `${DAYS[s] || s} through ${DAYS[e] || e}`;
+            }
+            return DAYS[v] || v;
+        }).join(', ');
+    }
+
+    function parseMonths(m) {
+        return m.split(',').map(v => MONTHS[v] || v).join(', ');
+    }
+
+    function setExample(val) {
+        document.getElementById('cronInput').value = val;
+        translateCron();
+    }
+
+    function showModal() { document.getElementById('modal').style.display = 'flex'; }
+    function hideModal() { document.getElementById('modal').style.display = 'none'; }
+
+    // Initial load
+    translateCron();
+</script>
+
+</body>
+</html>
